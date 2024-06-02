@@ -89,6 +89,19 @@ async function run() {
       }
     });
 
+        // Clear JWT token
+        app.post("/logout", async (req, res) => {
+          try {
+            res
+              .clearCookie("token", cookieOptions)
+              .status(200)
+              .send({ success: true });
+          } catch (error) {
+            console.error("Error clearing JWT:", error);
+            res.status(500).json({ message: "Error clearing JWT" });
+          }
+        });
+    
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
