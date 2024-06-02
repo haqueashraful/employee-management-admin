@@ -146,6 +146,19 @@ async function run() {
       }
     });
 
+
+        // verify fired user
+        app.patch("/users/fired/:email", async (req, res) => {
+          const { email } = req.params;
+          const result = await usersCollection.updateOne(
+            { email },
+            { $set: { isFired: true } }
+          );
+          res.send(result);
+        });
+
+        
+        
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
