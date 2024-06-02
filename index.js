@@ -101,7 +101,15 @@ async function run() {
             res.status(500).json({ message: "Error clearing JWT" });
           }
         });
-    
+
+        
+
+        
+    // Get all users
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
