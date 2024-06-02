@@ -35,7 +35,33 @@ async function run() {
     await client.connect();
 
     // Middleware to verify token
-  
+    const verifyToken = (req, res, next) => {
+      const token = req.cookies.token;
+      if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      try {
+        const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+        req.user = decoded;
+        next();
+      } catch (error) {
+        console.error("Error verifying JWT:", error);
+        return res.status(403).json({ message: "Forbidden" });
+      }
+    };
+
+    // Middleware to verify admin
+    const verifyAdmin = async (req, res, next) => {
+      const user = req.user;
+
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      next();
+    };
+
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
