@@ -158,6 +158,16 @@ async function run() {
           res.send(result);
         });
 
+        // change verify 
+        app.patch("/users/verify/:email", async (req, res) => {
+          const { email } = req.params;
+          const result = await usersCollection.updateOne(
+            { email },
+            { $set: { isVerified: true } }
+          );
+          res.send(result);
+        });
+
         // get role
         app.get("/users/role/:email", async (req, res) => {
           const { email } = req.params;
@@ -196,6 +206,10 @@ async function run() {
           const result = await workCollection.findOne({ email });
           res.send(result);
         })
+
+
+
+        
 
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
