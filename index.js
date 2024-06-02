@@ -124,6 +124,28 @@ async function run() {
 
 
     
+
+    // Create a new user
+    app.post("/users", async (req, res) => {
+      try {
+        const { email, ...rest } = req.body;
+
+        const existingUser = await usersCollection.findOne({ email });
+
+        if (existingUser) {
+          return res.status(409).send({ message: "User already exists" });
+        }
+
+        const userWithSalary = { email, ...rest, salary: 0, role: 'employee', isVerified: false, isFired: false };
+        const result = await usersCollection.insertOne(userWithSalary);
+        console.log(result)
+        res.send(result);
+      } catch (error) {
+        console.error("Error creating user:", error);
+        res.status(500).json({ message: "Error creating user" });
+      }
+    });
+
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
