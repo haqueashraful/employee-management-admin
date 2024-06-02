@@ -158,7 +158,15 @@ async function run() {
         });
 
         
-        
+        // isAdmin Verify
+        app.get("/users/admin/:email", async (req, res) => {
+          const { email } = req.params;
+          const user = await usersCollection.findOne({ email });
+          const isAdmin = user?.role === "admin";
+          res.send({ admin: isAdmin });
+        })
+
+
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
