@@ -110,6 +110,20 @@ async function run() {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
+
+    
+    // get user is fire 
+    app.get("/users/fired/:email", async (req, res) => {
+      const { email } = req.params;
+      const result = await usersCollection.findOne({ email });
+      if (result) {
+        return res.send({ isFired: result.isFired });
+      }
+      res.send({ isFired: false });
+    });
+
+
+    
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
