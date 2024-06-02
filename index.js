@@ -147,16 +147,29 @@ async function run() {
       }
     });
 
+    app.patch("/users/:email", async (req, res) => {
+      const { email } = req.params;
+      const fieldsToUpdate = req.body; 
+      console.log(fieldsToUpdate);
+      
+      try {
+        const result = await usersCollection.updateOne(
+          { email },
+          { $set: fieldsToUpdate }
+        );
+    
+        if (result.modifiedCount === 0) {
+          return res.status(404).send({ message: "User not found or no changes made" });
+        }
+    
+        res.send({ message: "User updated successfully", result });
+      } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
 
-        // verify fired user
-        app.patch("/users/fired/:email", async (req, res) => {
-          const { email } = req.params;
-          const result = await usersCollection.updateOne(
-            { email },
-            { $set: { isFired: true } }
-          );
-          res.send(result);
-        });
+    
 
         // change verify 
         app.patch("/users/verify/:email", async (req, res) => {
