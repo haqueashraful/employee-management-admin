@@ -29,6 +29,7 @@ const client = new MongoClient(uri, {
 
 // collection related
 const usersCollection = client.db("supermercy").collection("users");
+const workCollection = client.db("supermercy").collection("work");
 
 async function run() {
   try {
@@ -157,6 +158,12 @@ async function run() {
           res.send(result);
         });
 
+        // get role
+        app.get("/users/role/:email", async (req, res) => {
+          const { email } = req.params;
+          const user = await usersCollection.findOne({ email });
+          res.send({ role: user?.role });
+        })
         
         // isAdmin Verify
         app.get("/users/admin/:email", async (req, res) => {
@@ -166,6 +173,29 @@ async function run() {
           res.send({ admin: isAdmin });
         })
 
+
+        // work apis
+
+        app.get("/works", async (req, res) => {
+          const result = await workCollection.find().toArray();
+          res.send(result);
+        });
+
+        app.post("/works", async (req, res) => {
+          try { 
+            const result = await workCollection.insertOne(req.body);
+            res.send(result);
+          } catch (error) {
+            console.error("Error creating work:", error);
+            res.status(500).json({ message: "Error creating work" });
+          }
+        });
+
+        app.get("/works/:email", async (req, res) => {
+          const { email } = req.params;
+          const result = await workCollection.findOne({ email });
+          res.send(result);
+        })
 
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
