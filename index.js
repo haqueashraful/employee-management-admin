@@ -185,11 +185,27 @@ async function run() {
 
 
         // work apis
-
         app.get("/works", async (req, res) => {
-          const result = await workCollection.find().toArray();
-          res.send(result);
-        });
+          const { employee, month } = req.query;
+          const query = {};
+      
+          if (employee && employee !== "null") {
+              query.name = employee;
+          }
+      
+          if (month && month !== "null") {
+              const monthRegex = month.replace(/\//g, "\\/");
+              query.date = { $regex: monthRegex };
+          }
+          try {
+              const result = await workCollection.find(query).toArray();
+              res.send(result);
+          } catch (error) {
+              console.error("Error fetching work records:", error);
+              res.status(500).send("Internal Server Error");
+          }
+      });
+      
 
         app.post("/works", async (req, res) => {
           try { 
