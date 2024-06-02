@@ -62,6 +62,33 @@ async function run() {
       next();
     };
 
+
+     // Cookie options for token
+     const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    };
+
+    // Create JWT token
+    app.post("/jwt", async (req, res) => {
+      try {
+        const { email } = req.body;
+        const payload = { email };
+        const token = jwt.sign(payload, process.env.TOKEN_SECRET, {
+          expiresIn: "1h",
+        });
+
+        res
+          .cookie("token", token, cookieOptions)
+          .status(200)
+          .send({ token, message: "Token created successfully" });
+      } catch (error) {
+        console.error("Error creating JWT:", error);
+        res.status(500).json({ message: "Error creating JWT" });
+      }
+    });
+
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
       res.send("Hello World!");
