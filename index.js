@@ -204,6 +204,8 @@ async function run() {
       res.send({ admin: isAdmin });
     });
 
+
+
     // work apis
     app.get("/works", async (req, res) => {
       const { employee, month } = req.query;
@@ -237,7 +239,7 @@ async function run() {
 
     app.get("/works/:email", async (req, res) => {
       const { email } = req.params;
-      const result = await workCollection.findOne({ email });
+      const result = await workCollection.find({ userEmail: email }).toArray();
       res.send(result);
     });
 
