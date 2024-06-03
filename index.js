@@ -272,7 +272,7 @@ async function run() {
       res.send(result);
     })
 
-    // Get a single user's payment
+    // Get user's payment of this month exists
     app.get("/payment/:email", async (req, res) => {
       try {
         const { email } = req.params;
