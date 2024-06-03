@@ -4,7 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -30,6 +30,7 @@ const client = new MongoClient(uri, {
 // collection related
 const usersCollection = client.db("supermercy").collection("users");
 const workCollection = client.db("supermercy").collection("work");
+const paymentCollection = client.db("supermercy").collection("payment");
 
 async function run() {
   try {
@@ -63,9 +64,8 @@ async function run() {
       next();
     };
 
-
-     // Cookie options for token
-     const cookieOptions = {
+    // Cookie options for token
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
@@ -90,30 +90,33 @@ async function run() {
       }
     });
 
-        // Clear JWT token
-        app.post("/logout", async (req, res) => {
-          try {
-            res
-              .clearCookie("token", cookieOptions)
-              .status(200)
-              .send({ success: true });
-          } catch (error) {
-            console.error("Error clearing JWT:", error);
-            res.status(500).json({ message: "Error clearing JWT" });
-          }
-        });
+    // Clear JWT token
+    app.post("/logout", async (req, res) => {
+      try {
+        res
+          .clearCookie("token", cookieOptions)
+          .status(200)
+          .send({ success: true });
+      } catch (error) {
+        console.error("Error clearing JWT:", error);
+        res.status(500).json({ message: "Error clearing JWT" });
+      }
+    });
 
-        
-
-        
     // Get all users
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
-    
-    // get user is fire 
+    // get by email
+    app.get("/users/:email", async (req, res) => {
+      const { email } = req.params;
+      const result = await usersCollection.findOne({ email });
+      res.send(result);
+    });
+
+    // get user is fire
     app.get("/users/fired/:email", async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
@@ -122,9 +125,6 @@ async function run() {
       }
       res.send({ isFired: false });
     });
-
-
-    
 
     // Create a new user
     app.post("/users", async (req, res) => {
@@ -137,9 +137,16 @@ async function run() {
           return res.status(409).send({ message: "User already exists" });
         }
 
-        const userWithSalary = { email, ...rest, salary: 0, role: 'employee', isVerified: false, isFired: false };
+        const userWithSalary = {
+          email,
+          ...rest,
+          salary: 0,
+          role: "employee",
+          isVerified: false,
+          isFired: false,
+        };
         const result = await usersCollection.insertOne(userWithSalary);
-        console.log(result)
+        console.log(result);
         res.send(result);
       } catch (error) {
         console.error("Error creating user:", error);
@@ -149,19 +156,21 @@ async function run() {
 
     app.patch("/users/:email", async (req, res) => {
       const { email } = req.params;
-      const fieldsToUpdate = req.body; 
+      const fieldsToUpdate = req.body;
       console.log(fieldsToUpdate);
-      
+
       try {
         const result = await usersCollection.updateOne(
           { email },
           { $set: fieldsToUpdate }
         );
-    
+
         if (result.modifiedCount === 0) {
-          return res.status(404).send({ message: "User not found or no changes made" });
+          return res
+            .status(404)
+            .send({ message: "User not found or no changes made" });
         }
-    
+
         res.send({ message: "User updated successfully", result });
       } catch (error) {
         console.error("Error updating user:", error);
@@ -169,76 +178,147 @@ async function run() {
       }
     });
 
-    
+    // change verify
+    app.patch("/users/verify/:email", async (req, res) => {
+      const { email } = req.params;
+      const result = await usersCollection.updateOne(
+        { email },
+        { $set: { isVerified: true } }
+      );
+      res.send(result);
+    });
 
-        // change verify 
-        app.patch("/users/verify/:email", async (req, res) => {
-          const { email } = req.params;
-          const result = await usersCollection.updateOne(
-            { email },
-            { $set: { isVerified: true } }
-          );
-          res.send(result);
+    // get role
+    app.get("/users/role/:email", async (req, res) => {
+      const { email } = req.params;
+      const user = await usersCollection.findOne({ email });
+      res.send({ role: user?.role });
+    });
+
+    // isAdmin Verify
+    app.get("/users/admin/:email", async (req, res) => {
+      const { email } = req.params;
+      const user = await usersCollection.findOne({ email });
+      const isAdmin = user?.role === "admin";
+      res.send({ admin: isAdmin });
+    });
+
+    // work apis
+    app.get("/works", async (req, res) => {
+      const { employee, month } = req.query;
+      const query = {};
+
+      if (employee && employee !== "null") {
+        query.name = employee;
+      }
+
+      if (month && month !== "null") {
+        const monthRegex = month.replace(/\//g, "\\/");
+        query.date = { $regex: monthRegex };
+      }
+      try {
+        const result = await workCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching work records:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+
+    app.post("/works", async (req, res) => {
+      try {
+        const result = await workCollection.insertOne(req.body);
+        res.send(result);
+      } catch (error) {
+        console.error("Error creating work:", error);
+        res.status(500).json({ message: "Error creating work" });
+      }
+    });
+
+    app.get("/works/:email", async (req, res) => {
+      const { email } = req.params;
+      const result = await workCollection.findOne({ email });
+      res.send(result);
+    });
+
+    // Create a payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { amount } = req.body;
+
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: "usd",
+          payment_method_types: ["card"], // Allow card payments
         });
 
-        // get role
-        app.get("/users/role/:email", async (req, res) => {
-          const { email } = req.params;
-          const user = await usersCollection.findOne({ email });
-          res.send({ role: user?.role });
-        })
-        
-        // isAdmin Verify
-        app.get("/users/admin/:email", async (req, res) => {
-          const { email } = req.params;
-          const user = await usersCollection.findOne({ email });
-          const isAdmin = user?.role === "admin";
-          res.send({ admin: isAdmin });
-        })
-
-
-        // work apis
-        app.get("/works", async (req, res) => {
-          const { employee, month } = req.query;
-          const query = {};
-      
-          if (employee && employee !== "null") {
-              query.name = employee;
-          }
-      
-          if (month && month !== "null") {
-              const monthRegex = month.replace(/\//g, "\\/");
-              query.date = { $regex: monthRegex };
-          }
-          try {
-              const result = await workCollection.find(query).toArray();
-              res.send(result);
-          } catch (error) {
-              console.error("Error fetching work records:", error);
-              res.status(500).send("Internal Server Error");
-          }
-      });
-      
-
-        app.post("/works", async (req, res) => {
-          try { 
-            const result = await workCollection.insertOne(req.body);
-            res.send(result);
-          } catch (error) {
-            console.error("Error creating work:", error);
-            res.status(500).json({ message: "Error creating work" });
-          }
+        res.send({
+          clientSecret: paymentIntent.client_secret,
         });
+      } catch (error) {
+        res.status(400).send({ error: error.message });
+      }
+    });
 
-        app.get("/works/:email", async (req, res) => {
-          const { email } = req.params;
-          const result = await workCollection.findOne({ email });
-          res.send(result);
-        })
+    // Get all payments
+    app.get("/payments", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
 
+    app.get("/payments/:email", async (req, res) => {
+      const { email } = req.params;
+      const result = await paymentCollection.find({ email }).toArray();
+      res.send(result);
+    })
 
+    // Get a single user's payment
+    app.get("/payment/:email", async (req, res) => {
+      try {
+        const { email } = req.params;
+        const { month, year } = req.query;
 
-        
+        console.log(month, year , email);
+
+        // Ensure the email parameter is provided
+        if (!email) {
+          return res.status(400).send({ error: "Email is required." });
+        }
+
+        // Ensure month and year query parameters are provided
+        if (!month || !year) {
+          return res
+            .status(400)
+            .send({ error: "Month and year are required." });
+        }
+
+        // Perform the database query to get all payment records for the specified email
+        const payments = await paymentCollection.find({ email }).toArray();
+        console.log("Payments found:", payments);
+
+        // Check if any of the records match the specified month and year
+        const paymentExists = payments.some(
+          (payment) =>
+            payment.month.toLowerCase() === month.toLowerCase() &&
+            payment.year === year
+        );
+
+        if (paymentExists) {
+          res.send({ exists: true });
+        } else {
+          res.send({ exists: false });
+        }
+      } catch (error) {
+        console.error("Failed to get payment:", error);
+        res.status(500).send({ error: "Internal server error." });
+      }
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     app.get("/", (req, res) => {
