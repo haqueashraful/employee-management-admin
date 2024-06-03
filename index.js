@@ -9,9 +9,11 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "*"],
+  origin: [
+    "http://localhost:5173", "*",
+  ],
   credentials: true,
-};
+}
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
@@ -34,7 +36,8 @@ const paymentCollection = client.db("supermercy").collection("payment");
 
 async function run() {
   try {
-    await client.connect();
+
+    // await client.connect();
 
     // Middleware to verify token
     const verifyToken = (req, res, next) => {
@@ -130,13 +133,11 @@ async function run() {
     app.post("/users", async (req, res) => {
       try {
         const { email, ...rest } = req.body;
-
         const existingUser = await usersCollection.findOne({ email });
 
         if (existingUser) {
           return res.status(409).send({ message: "User already exists" });
         }
-
         const userWithSalary = {
           email,
           ...rest,
@@ -147,7 +148,7 @@ async function run() {
         };
         const result = await usersCollection.insertOne(userWithSalary);
         console.log(result);
-        res.send(result);
+        res.send({ message: "User created successfully", result });
       } catch (error) {
         console.error("Error creating user:", error);
         res.status(500).json({ message: "Error creating user" });
@@ -207,7 +208,6 @@ async function run() {
     app.get("/works", async (req, res) => {
       const { employee, month } = req.query;
       const query = {};
-
       if (employee && employee !== "null") {
         query.name = employee;
       }
@@ -270,15 +270,13 @@ async function run() {
       const { email } = req.params;
       const result = await paymentCollection.find({ email }).toArray();
       res.send(result);
-    })
+    });
 
     // Get user's payment of this month exists
     app.get("/payment/:email", async (req, res) => {
       try {
         const { email } = req.params;
         const { month, year } = req.query;
-
-        console.log(month, year , email);
 
         // Ensure the email parameter is provided
         if (!email) {
@@ -324,10 +322,8 @@ async function run() {
     app.get("/", (req, res) => {
       res.send("Hello World!");
     });
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
