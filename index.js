@@ -10,7 +10,8 @@ const port = process.env.PORT || 5000;
 
 const corsOptions = {
   origin: [
-    "http://localhost:5173", "*",
+    "http://localhost:5173", 
+    "https://employeecare-ha.netlify.app",
   ],
   credentials: true,
 }
@@ -33,6 +34,7 @@ const client = new MongoClient(uri, {
 const usersCollection = client.db("supermercy").collection("users");
 const workCollection = client.db("supermercy").collection("work");
 const paymentCollection = client.db("supermercy").collection("payment");
+const reviewCollection = client.db("supermercy").collection("reviews");
 
 async function run() {
   try {
@@ -159,7 +161,6 @@ async function run() {
       const { email } = req.params;
       const fieldsToUpdate = req.body;
       console.log(fieldsToUpdate);
-
       try {
         const result = await usersCollection.updateOne(
           { email },
@@ -317,6 +318,20 @@ async function run() {
     app.post("/payments", async (req, res) => {
       const payment = req.body;
       const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+
+
+
+    // review apis
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/reviews", async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
       res.send(result);
     });
 
