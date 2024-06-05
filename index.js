@@ -112,20 +112,20 @@ async function run() {
     });
 
     // Get all users
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
     // get by email
-    app.get("/users/:email", verifyToken, async (req, res) => {
+    app.get("/users/:email",  async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       res.send(result);
     });
 
     // get user is fire
-    app.get("/users/fired/:email", verifyToken, async (req, res) => {
+    app.get("/users/fired/:email", async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       if (result) {
@@ -339,7 +339,7 @@ async function run() {
 
 
     // review apis
-    app.get("/reviews", verifyToken, async (req, res) => {
+    app.get("/reviews",  async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
