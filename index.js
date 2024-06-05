@@ -35,6 +35,9 @@ const usersCollection = client.db("supermercy").collection("users");
 const workCollection = client.db("supermercy").collection("work");
 const paymentCollection = client.db("supermercy").collection("payment");
 const reviewCollection = client.db("supermercy").collection("reviews");
+const contactCollection = client.db("supermercy").collection("contact");
+
+
 
 async function run() {
   try {
@@ -202,9 +205,8 @@ async function run() {
       const { email } = req.params;
       const user = await usersCollection.findOne({ email });
       const isAdmin = user?.role === "admin";
-      res.send({ admin: isAdmin });
+      res.send({ isAdmin });
     });
-
 
 
     // work apis
@@ -318,6 +320,19 @@ async function run() {
     app.post("/payments", async (req, res) => {
       const payment = req.body;
       const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+
+
+    // contact us apis
+    app.get("/contacts", async (req, res) => {
+      const result = await contactCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/contacts", async (req, res) => {
+      const contact = req.body;
+      const result = await contactCollection.insertOne(contact);
       res.send(result);
     });
 
