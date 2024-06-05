@@ -112,20 +112,20 @@ async function run() {
     });
 
     // Get all users
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
     // get by email
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       res.send(result);
     });
 
     // get user is fire
-    app.get("/users/fired/:email", async (req, res) => {
+    app.get("/users/fired/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       if (result) {
@@ -160,7 +160,7 @@ async function run() {
       }
     });
 
-    app.patch("/users/:email", async (req, res) => {
+    app.patch("/users/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const fieldsToUpdate = req.body;
       console.log(fieldsToUpdate);
@@ -184,7 +184,7 @@ async function run() {
     });
 
     // change verify
-    app.patch("/users/verify/:email", async (req, res) => {
+    app.patch("/users/verify/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.updateOne(
         { email },
@@ -194,14 +194,14 @@ async function run() {
     });
 
     // get role
-    app.get("/users/role/:email", async (req, res) => {
+    app.get("/users/role/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const user = await usersCollection.findOne({ email });
       res.send({ role: user?.role });
     });
 
     // isAdmin Verify
-    app.get("/users/admin/:email", async (req, res) => {
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const user = await usersCollection.findOne({ email });
       const isAdmin = user?.role === "admin";
@@ -210,7 +210,7 @@ async function run() {
 
 
     // work apis
-    app.get("/works", async (req, res) => {
+    app.get("/works", verifyToken, async (req, res) => {
       const { employee, month } = req.query;
       const query = {};
       if (employee && employee !== "null") {
@@ -230,7 +230,7 @@ async function run() {
       }
     });
 
-    app.post("/works", async (req, res) => {
+    app.post("/works" , verifyToken, async (req, res) => {
       try {
         const result = await workCollection.insertOne(req.body);
         res.send(result);
@@ -240,7 +240,7 @@ async function run() {
       }
     });
 
-    app.get("/works/:email", async (req, res) => {
+    app.get("/works/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const result = await workCollection.find({ userEmail: email }).toArray();
       res.send(result);
@@ -266,19 +266,19 @@ async function run() {
     });
 
     // Get all payments
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", verifyToken, async (req, res) => {
       const result = await paymentCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/payments/:email", async (req, res) => {
+    app.get("/payments/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const result = await paymentCollection.find({ email }).toArray();
       res.send(result);
     });
 
     // Get user's payment of this month exists
-    app.get("/payment/:email", async (req, res) => {
+    app.get("/payment/:email", verifyToken, async (req, res) => {
       try {
         const { email } = req.params;
         const { month, year } = req.query;
@@ -317,7 +317,7 @@ async function run() {
       }
     });
 
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", verifyToken, async (req, res) => {
       const payment = req.body;
       const result = await paymentCollection.insertOne(payment);
       res.send(result);
@@ -325,7 +325,7 @@ async function run() {
 
 
     // contact us apis
-    app.get("/contacts", async (req, res) => {
+    app.get("/contacts", verifyToken, async (req, res) => {
       const result = await contactCollection.find().toArray();
       res.send(result);
     });
@@ -339,7 +339,7 @@ async function run() {
 
 
     // review apis
-    app.get("/reviews", async (req, res) => {
+    app.get("/reviews", verifyToken, async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
