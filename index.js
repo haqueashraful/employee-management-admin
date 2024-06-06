@@ -45,21 +45,25 @@ async function run() {
     // await client.connect();
 
     // Middleware to verify token
-    const verifyToken = (req, res, next) => {
-      const token = req.cookies.token;
-      if (!token) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
+ // Middleware to verify token
+const verifyToken = (req, res, next) => {
+  const token = req.cookies.token;
+  console.log("Token from cookie:", token); // Add this line
 
-      try {
-        const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-        req.user = decoded;
-        next();
-      } catch (error) {
-        console.error("Error verifying JWT:", error);
-        return res.status(403).json({ message: "Forbidden" });
-      }
-    };
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+    console.log("Decoded token:", decoded); // Add this line
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error("Error verifying JWT:", error);
+    return res.status(403).json({ message: "Forbidden" });
+  }
+};
 
     // Middleware to verify admin
     const verifyAdmin = async (req, res, next) => {
@@ -79,24 +83,25 @@ async function run() {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
     };
 
-    // Create JWT token
-    app.post("/jwt", async (req, res) => {
-      try {
-        const { email } = req.body;
-        const payload = { email };
-        const token = jwt.sign(payload, process.env.TOKEN_SECRET, {
-          expiresIn: "1h",
-        });
-
-        res
-          .cookie("token", token, cookieOptions)
-          .status(200)
-          .send({ token, message: "Token created successfully" });
-      } catch (error) {
-        console.error("Error creating JWT:", error);
-        res.status(500).json({ message: "Error creating JWT" });
-      }
+  // Create JWT token
+app.post("/jwt", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const payload = { email };
+    const token = jwt.sign(payload, process.env.TOKEN_SECRET, {
+      expiresIn: "1h",
     });
+
+    res
+      .cookie("token", token, cookieOptions)
+      .status(200)
+      .send({ token, message: "Token created successfully" });
+  } catch (error) {
+    console.error("Error creating JWT:", error);
+    res.status(500).json({ message: "Error creating JWT" });
+  }
+});
+
 
     // Clear JWT token
     app.post("/logout", async (req, res) => {
@@ -146,8 +151,6 @@ async function run() {
         const userWithSalary = {
           email,
           ...rest,
-          salary: 0,
-          role: "employee",
           isVerified: false,
           isFired: false,
         };
@@ -193,12 +196,38 @@ async function run() {
       res.send(result);
     });
 
+    
     // get role
     app.get("/users/role/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const user = await usersCollection.findOne({ email });
       res.send({ role: user?.role });
     });
+
+    
+
+    // app.get("/users/role/:email", verifyToken, async (req, res) => {
+    //   const { email } = req.params;
+    //   try {
+    //     const user = await usersCollection.findOne({ email });
+    //     if (!user) {
+    //       return res.status(404).send({ error: "User not found" });
+    //     }
+    
+    //     if (user.role === 'hr') {
+    //       return res.send({ role: user.isVerified ? 'hr' : false });
+    //     } else if (user.role === 'employee' || user.role === 'admin') {
+    //       return res.send({ role: user.role });
+    //     } else {
+    //       return res.send({ role: false });
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching user role:", error);
+    //     res.status(500).send({ error: "Internal server error" });
+    //   }
+    // });
+    
+    
 
     // isAdmin Verify
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
