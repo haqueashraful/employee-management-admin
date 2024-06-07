@@ -9,12 +9,9 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: [
-    "http://localhost:5173", 
-    "https://employeecare-ha.netlify.app",
-  ],
+  origin: ["http://localhost:5173", "https://employeecare-ha.netlify.app"],
   credentials: true,
-}
+};
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
@@ -37,33 +34,30 @@ const paymentCollection = client.db("supermercy").collection("payment");
 const reviewCollection = client.db("supermercy").collection("reviews");
 const contactCollection = client.db("supermercy").collection("contact");
 
-
-
 async function run() {
   try {
-
     // await client.connect();
 
     // Middleware to verify token
- // Middleware to verify token
-const verifyToken = (req, res, next) => {
-  const token = req.cookies.token;
-  console.log("Token from cookie:", token); // Add this line
+    // Middleware to verify token
+    const verifyToken = (req, res, next) => {
+      const token = req.cookies.token;
+      console.log("Token from cookie:", token); // Add this line
 
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-    console.log("Decoded token:", decoded); // Add this line
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.error("Error verifying JWT:", error);
-    return res.status(403).json({ message: "Forbidden" });
-  }
-};
+      if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      try {
+        const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+        console.log("Decoded token:", decoded); // Add this line
+        req.user = decoded;
+        next();
+      } catch (error) {
+        console.error("Error verifying JWT:", error);
+        return res.status(403).json({ message: "Forbidden" });
+      }
+    };
 
     // Middleware to verify admin
     const verifyAdmin = async (req, res, next) => {
@@ -83,25 +77,24 @@ const verifyToken = (req, res, next) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
     };
 
-  // Create JWT token
-app.post("/jwt", async (req, res) => {
-  try {
-    const { email } = req.body;
-    const payload = { email };
-    const token = jwt.sign(payload, process.env.TOKEN_SECRET, {
-      expiresIn: "1h",
+    // Create JWT token
+    app.post("/jwt", async (req, res) => {
+      try {
+        const { email } = req.body;
+        const payload = { email };
+        const token = jwt.sign(payload, process.env.TOKEN_SECRET, {
+          expiresIn: "1h",
+        });
+
+        res
+          .cookie("token", token, cookieOptions)
+          .status(200)
+          .send({ token, message: "Token created successfully" });
+      } catch (error) {
+        console.error("Error creating JWT:", error);
+        res.status(500).json({ message: "Error creating JWT" });
+      }
     });
-
-    res
-      .cookie("token", token, cookieOptions)
-      .status(200)
-      .send({ token, message: "Token created successfully" });
-  } catch (error) {
-    console.error("Error creating JWT:", error);
-    res.status(500).json({ message: "Error creating JWT" });
-  }
-});
-
 
     // Clear JWT token
     app.post("/logout", async (req, res) => {
@@ -117,13 +110,19 @@ app.post("/jwt", async (req, res) => {
     });
 
     // Get all users
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
+    // get all verified users
+    app.get("/users/verified", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find({ isVerified: true }).toArray();
+      res.send(result);
+    });
+
     // get by email
-    app.get("/users/:email",  async (req, res) => {
+    app.get("/users/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       res.send(result);
@@ -196,15 +195,12 @@ app.post("/jwt", async (req, res) => {
       res.send(result);
     });
 
-    
     // get role
     app.get("/users/role/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const user = await usersCollection.findOne({ email });
       res.send({ role: user?.role });
     });
-
-    
 
     // app.get("/users/role/:email", verifyToken, async (req, res) => {
     //   const { email } = req.params;
@@ -213,7 +209,7 @@ app.post("/jwt", async (req, res) => {
     //     if (!user) {
     //       return res.status(404).send({ error: "User not found" });
     //     }
-    
+
     //     if (user.role === 'hr') {
     //       return res.send({ role: user.isVerified ? 'hr' : false });
     //     } else if (user.role === 'employee' || user.role === 'admin') {
@@ -226,8 +222,6 @@ app.post("/jwt", async (req, res) => {
     //     res.status(500).send({ error: "Internal server error" });
     //   }
     // });
-    
-    
 
     // isAdmin Verify
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
@@ -236,7 +230,6 @@ app.post("/jwt", async (req, res) => {
       const isAdmin = user?.role === "admin";
       res.send({ isAdmin });
     });
-
 
     // work apis
     app.get("/works", verifyToken, async (req, res) => {
@@ -259,7 +252,7 @@ app.post("/jwt", async (req, res) => {
       }
     });
 
-    app.post("/works" , verifyToken, async (req, res) => {
+    app.post("/works", verifyToken, async (req, res) => {
       try {
         const result = await workCollection.insertOne(req.body);
         res.send(result);
@@ -352,7 +345,6 @@ app.post("/jwt", async (req, res) => {
       res.send(result);
     });
 
-
     // contact us apis
     app.get("/contacts", verifyToken, async (req, res) => {
       const result = await contactCollection.find().toArray();
@@ -365,10 +357,8 @@ app.post("/jwt", async (req, res) => {
       res.send(result);
     });
 
-
-
     // review apis
-    app.get("/reviews",  async (req, res) => {
+    app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
