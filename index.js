@@ -42,7 +42,6 @@ async function run() {
     // Middleware to verify token
     const verifyToken = (req, res, next) => {
       const token = req.cookies.token;
-      console.log("Token from cookie:", token); // Add this line
 
       if (!token) {
         return res.status(401).json({ message: "Unauthorized" });
@@ -50,7 +49,6 @@ async function run() {
 
       try {
         const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-        console.log("Decoded token:", decoded); // Add this line
         req.user = decoded;
         next();
       } catch (error) {
@@ -59,16 +57,22 @@ async function run() {
       }
     };
 
-    // Middleware to verify admin
-    const verifyAdmin = async (req, res, next) => {
-      const user = req.user;
+ // Middleware to verify admin
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await usersCollection.findOne({ email: userEmail });
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
-      if (user.role !== "admin") {
-        return res.status(403).json({ message: "Forbidden" });
-      }
+    next();
+  } catch (error) {
+    console.error("Error verifying admin:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
-      next();
-    };
 
     // Cookie options for token
     const cookieOptions = {
@@ -110,7 +114,7 @@ async function run() {
     });
 
     // Get all users
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users",  async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -122,7 +126,7 @@ async function run() {
     });
 
     // get by email
-    app.get("/users/:email", verifyToken, async (req, res) => {
+    app.get("/users/:email",  async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       res.send(result);
@@ -154,7 +158,6 @@ async function run() {
           isFired: false,
         };
         const result = await usersCollection.insertOne(userWithSalary);
-        console.log(result);
         res.send({ message: "User created successfully", result });
       } catch (error) {
         console.error("Error creating user:", error);
@@ -165,7 +168,6 @@ async function run() {
     app.patch("/users/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const fieldsToUpdate = req.body;
-      console.log(fieldsToUpdate);
       try {
         const result = await usersCollection.updateOne(
           { email },
@@ -304,24 +306,18 @@ async function run() {
       try {
         const { email } = req.params;
         const { month, year } = req.query;
-
-        // Ensure the email parameter is provided
         if (!email) {
           return res.status(400).send({ error: "Email is required." });
         }
 
-        // Ensure month and year query parameters are provided
         if (!month || !year) {
           return res
             .status(400)
             .send({ error: "Month and year are required." });
         }
 
-        // Perform the database query to get all payment records for the specified email
         const payments = await paymentCollection.find({ email }).toArray();
-        console.log("Payments found:", payments);
 
-        // Check if any of the records match the specified month and year
         const paymentExists = payments.some(
           (payment) =>
             payment.month.toLowerCase() === month.toLowerCase() &&
