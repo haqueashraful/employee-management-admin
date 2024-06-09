@@ -266,7 +266,7 @@ const verifyAdmin = async (req, res, next) => {
 
     app.get("/works/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
-      const result = await workCollection.find({ userEmail: email }).toArray();
+      const result = await workCollection.find({ userEmail: email }).sort({createdAt: -1}).toArray();
       res.send(result);
     });
 
