@@ -29,10 +29,66 @@ const client = new MongoClient(uri, {
 
 // collection related
 const usersCollection = client.db("supermercy").collection("users");
+// data sample
+// {
+//   "_id": "665b4b24e35bebf166b643c2",
+//   "email": "123ashrafulhaque@gmail.com",
+//   "name": "Ashraful Haque",
+//   "role": "admin",
+//   "bank_account_no": "4242424242424242",
+//   "designation": "N/A",
+//   "photo": "https://lh3.googleusercontent.com/a/ACg8ocKagLlEnu_0ZLwYahloX8ASDM1zI4dabcAGu1NJWPq9v3ZzD98B=s96-c",
+//   "salary": 700,
+//   "isVerified": true,
+//   "isFired": false
+// }
+
 const workCollection = client.db("supermercy").collection("work");
+// data sample
+// {
+// "_id" : "665c2a9e15327d312fdedd3c",
+// "task":"Support",
+// "hours":"5",
+// "date":"2024-06-02",
+// "userEmail":"88mohammedhaque@gmail.com",
+// "name":"rana "
+// }
+
 const paymentCollection = client.db("supermercy").collection("payment");
+// data sample
+// {
+// "_id":"665d88c6117a2f96bda9af13",
+// "email":"88mohammedhaque@gmail.com",
+// "salary":500,
+// "name":"rana ",
+// "photo":"https://i.ibb.co/PDmYMnP/bg3.jpg",
+// "designation":"Sales Assistant",
+// "bankAccountNo":"22342324332324",
+// "role":"hr",
+// "transactionId":"pi_3PNWuvJCEfzY5SAc0yKrwRve",
+// "month":"June",
+// "year":"2024",
+// "status":"completed"
+// }
+
 const reviewCollection = client.db("supermercy").collection("reviews");
+// data sample
+// {
+//   "_id": "665ee7f38df64cab744c54ec",
+//   "name": "Robert Johnson",
+//   "details": "This is by far the best service I have ever used. The customer support is outstanding, and the product itself is top-notch. I couldn't be happier!",
+//   "rating": 5
+// }
+
 const contactCollection = client.db("supermercy").collection("contact");
+// data sample
+// {
+//   "_id":"66639498c2a82b233bae4cae",
+// "name":"MD. ASHRAFUL HAQUE",
+// "email":"123ashrafulhaque@gmail.com",
+// "message":"i am new here how can i reach you",
+// "phone":"01856328101"
+// }
 
 async function run() {
   try {
@@ -57,22 +113,21 @@ async function run() {
       }
     };
 
- // Middleware to verify admin
-const verifyAdmin = async (req, res, next) => {
-  try {
-    const userEmail = req.user.email;
-    const user = await usersCollection.findOne({ email: userEmail });
-    if (!user || user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
+    // Middleware to verify admin
+    const verifyAdmin = async (req, res, next) => {
+      try {
+        const userEmail = req.user.email;
+        const user = await usersCollection.findOne({ email: userEmail });
+        if (!user || user.role !== "admin") {
+          return res.status(403).json({ message: "Forbidden" });
+        }
 
-    next();
-  } catch (error) {
-    console.error("Error verifying admin:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
+        next();
+      } catch (error) {
+        console.error("Error verifying admin:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    };
 
     // Cookie options for token
     const cookieOptions = {
@@ -114,7 +169,7 @@ const verifyAdmin = async (req, res, next) => {
     });
 
     // Get all users
-    app.get("/users",  async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -126,7 +181,7 @@ const verifyAdmin = async (req, res, next) => {
     });
 
     // get by email
-    app.get("/users/:email",  async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
       const { email } = req.params;
       const result = await usersCollection.findOne({ email });
       res.send(result);
@@ -168,6 +223,7 @@ const verifyAdmin = async (req, res, next) => {
     app.patch("/users/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
       const fieldsToUpdate = req.body;
+      console.log(email, fieldsToUpdate);
       try {
         const result = await usersCollection.updateOne(
           { email },
@@ -266,7 +322,10 @@ const verifyAdmin = async (req, res, next) => {
 
     app.get("/works/:email", verifyToken, async (req, res) => {
       const { email } = req.params;
-      const result = await workCollection.find({ userEmail: email }).sort({createdAt: -1}).toArray();
+      const result = await workCollection
+        .find({ userEmail: email })
+        .sort({ createdAt: -1 })
+        .toArray();
       res.send(result);
     });
 
